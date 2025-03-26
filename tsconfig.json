@@ -18,12 +18,15 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/components/*": ["app/_components/*"],
+      "@/utils/*": ["app/_utils/*"]
     }
   },
   "include": [
-    "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+    "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"
+  ],
   "exclude": [
     "scrum-poker/node_modules"
   ]
