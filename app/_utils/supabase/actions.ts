@@ -16,3 +16,35 @@ export const fetchRoomById = async (id: string) => {
         .eq('id', id);
     return rooms && rooms?.length > 0 ? rooms.at(0) : { error: "Room doesn't exists" };
 }
+
+export const updateRoomStatusById = async (id: string, status: 'active' | 'inactive') => {
+    const { error } = await supabaseClient.from("rooms")
+        .update({ id, status })
+        .eq('id', id);
+
+    console.log(error);
+}
+
+export const deleteRoomById = async (id: string) => {
+    await supabaseClient.from("rooms")
+        .delete()
+        .eq('id', id);
+}
+
+export const createUser = async (username: string, roomId: string) => {
+    const { data: users, error } = await supabaseClient.from("users")
+        .upsert({
+            username,
+            room_id: roomId,
+        })
+        .select();
+    console.log(error);
+    return users;
+}
+
+export const fetchUsersByRoomId = async (roomId: string) => {
+    const { data: users } = await supabaseClient.from("users")
+    .select()
+    .eq('room_id', roomId);
+    return users;
+}
