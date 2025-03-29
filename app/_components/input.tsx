@@ -3,17 +3,21 @@ import { ChangeEventHandler } from "react";
 interface InputProps {
     label?: string;
     placeholder?: string;
+    defaultValue?: string;
     value?: string;
     onChange?: ChangeEventHandler<HTMLInputElement>;
 }
 
-export default function Input({ label, placeholder, value, onChange }: InputProps) {
+export default function Input({ label, placeholder, defaultValue, value, onChange }: InputProps) {
     return (
         <div className="flex items-center flex-col gap-2">
             {label && <label>{label}</label>}
             <input
                 className="sp-input"
-                placeholder={placeholder} value={value} onChange={onChange}
+                placeholder={placeholder}
+                defaultValue={defaultValue}
+                value={value}
+                onChange={onChange}
             />
         </div>
     )
