@@ -18,11 +18,13 @@ export const fetchRoomById = async (id: string) => {
 }
 
 export const updateRoomStatusById = async (id: string, status: 'active' | 'inactive') => {
-    const { error } = await supabaseClient.from("rooms")
+    const { data: rooms, error } = await supabaseClient.from("rooms")
         .update({ id, status })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
     console.log(error);
+    return rooms && rooms?.length > 0 ? rooms.at(0) : { error: "Room doesn't exists" };
 }
 
 export const deleteRoomById = async (id: string) => {

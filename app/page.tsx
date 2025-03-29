@@ -8,9 +8,9 @@ import { redirect } from 'next/navigation'
 export default function Home() {
 
   const handleCreateRoom = async () => {
-    console.log("creating new room")
+    // TODO: Add prompt to ask user's name before creating room
     const room = await createRoom();
-    console.log("room", room);
+    // TODO: Add create user to 'users' table with room.id
     redirect(`/room?id=${room.id}`);
   }
 

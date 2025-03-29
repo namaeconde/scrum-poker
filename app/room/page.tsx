@@ -1,6 +1,6 @@
 'use client'
 
-import { fetchRoomById } from '@/utils/supabase/actions';
+import { updateRoomStatusById } from '@/utils/supabase/actions';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from "react";
 
@@ -11,7 +11,7 @@ export default function Room() {
     const fetchRoom = async () => {
         const id = searchParams.get('id');
         if (id) {
-            const newValue = await fetchRoomById(id);
+            const newValue = await updateRoomStatusById(id, 'active');
             setRoom(newValue);
             return newValue;
         }
