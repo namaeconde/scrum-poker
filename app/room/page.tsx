@@ -17,16 +17,15 @@ export default function Room() {
         }
     }
 
-    const storedSessionRoom = JSON.parse(sessionStorage.getItem('room') as string);
-
     const leaveRoom = () => {
+        const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
         if (document.visibilityState === "hidden" && sessionStorage.getItem('isClosing') === 'true') {
-            navigator.sendBeacon(`/api/room/leave?id=${storedSessionRoom?.id}`);
+            navigator.sendBeacon(`/api/room/leave?id=${existingRoom?.id}`);
         }
     }
 
     useEffect(() => {
-        const existingRoom = storedSessionRoom;
+        const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
         if (!existingRoom) {
             fetchRoom().then((room) => {
                 sessionStorage.setItem('room', JSON.stringify(room));
