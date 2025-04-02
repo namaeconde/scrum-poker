@@ -1,4 +1,4 @@
-import { ChangeEventHandler } from "react";
+import {ChangeEventHandler, KeyboardEventHandler} from "react";
 
 interface InputProps {
     label?: string;
@@ -6,9 +6,10 @@ interface InputProps {
     defaultValue?: string;
     value?: string;
     onChange?: ChangeEventHandler<HTMLInputElement>;
+    onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }
 
-export default function Input({ label, placeholder, defaultValue, value, onChange }: InputProps) {
+export default function Input({ label, placeholder, defaultValue, value, onChange, onKeyDown }: InputProps) {
     return (
         <div className="flex items-center flex-col gap-2">
             {label && <label>{label}</label>}
@@ -18,6 +19,7 @@ export default function Input({ label, placeholder, defaultValue, value, onChang
                 defaultValue={defaultValue}
                 value={value}
                 onChange={onChange}
+                onKeyDown={onKeyDown}
             />
         </div>
     )

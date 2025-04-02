@@ -40,8 +40,17 @@ export const createUser = async (username: string, roomId: string) => {
             room_id: roomId,
         })
         .select();
+
     console.log(error);
-    return users;
+    return users && users?.length > 0 ? users.at(0) : null;
+}
+
+export const fetchUserById = async (id: string) => {
+    const { data: users } = await supabaseClient.from("users")
+        .select()
+        .eq('id', id);
+
+    return users && users?.length > 0 ? users.at(0) : null;
 }
 
 export const fetchUsersByRoomId = async (roomId: string) => {
@@ -49,4 +58,10 @@ export const fetchUsersByRoomId = async (roomId: string) => {
     .select()
     .eq('room_id', roomId);
     return users;
+}
+
+export const deleteUserById = async (id: string) => {
+    await supabaseClient.from("users")
+    .delete()
+    .eq('id', id);
 }

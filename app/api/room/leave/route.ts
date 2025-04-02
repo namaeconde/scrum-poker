@@ -1,16 +1,19 @@
-import { updateRoomStatusById } from "@/utils/supabase/actions";
+import { deleteUserById, updateRoomStatusById } from "@/utils/supabase/actions";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    // TODO: Update id to userid
-    const id = searchParams.get('id');
+    const roomId = searchParams.get('id');
 
-    // TODO: Delete user in users table
-    // TODO: Update room status to 'inactive' if there are no users in the room
-    if (id) await updateRoomStatusById(id, 'inactive');
+    const body = await request.text();
+    const data = JSON.parse(body);
+    if (data && data?.userId) {
+        await deleteUserById(data?.userId);
+    }
 
-    const roomInfo = { id: Date.now(), room_id: id };
+    if (roomId) await updateRoomStatusById(roomId, 'inactive');
+
+    const roomInfo = { id: Date.now(), room_id: roomId };
     return new Response(JSON.stringify(roomInfo), {
         status: 201,
         headers: { 'Content-Type': 'application/json' }
