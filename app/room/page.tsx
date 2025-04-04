@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import Input from "@/components/input";
 import Button from "@/components/button";
 import { useDebounce } from "use-debounce";
+import Table from "@/components/table";
+import { RoomType } from "@/types/RoomType";
+import { UserType } from "@/types/UserType";
 
 const fetchRoom = async (roomId: string | null) => {
     const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
@@ -41,9 +44,9 @@ export default function Room() {
     const searchParams = useSearchParams();
     const roomId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [room, setRoom] = useState<{ id: string }>();
+    const [room, setRoom] = useState<RoomType>();
     const [username, setUsername] = useState<string>();
-    const [user, setUser] = useState();
+    const [user, setUser] = useState<UserType>();
     const [debouncedUsername] = useDebounce(username, 500);
 
     const handleCreateUser = async () => {
@@ -81,7 +84,7 @@ export default function Room() {
 
     return (
         isLoading ? <div>Loading...</div> :
-            user ? <pre>{JSON.stringify(room)}</pre> :
+            room && user ? <Table room={room} currentUser={user} /> :
                 <div className="p-4 sm:p-5 sm:w-auto shadow-md inset-shadow-sm">
                     <div className="flex gap-4 items-center flex-col">
                         <Input label="Input your username"
