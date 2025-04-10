@@ -108,6 +108,3 @@ const cleanInactiveUsersCronJob = new CronJob('*/2 * * * *', async() => {
 if (!cleanInactiveUsersCronJob.isActive) {
     cleanInactiveUsersCronJob.start();
 }
-
-// TODO: Fetch users last seen for more than 10 minutes
-// TODO: Delete users last seen for more than 10 minutes

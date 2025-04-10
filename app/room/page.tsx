@@ -58,10 +58,10 @@ export default function Room() {
             const newValue = await createUser(debouncedUsername, room.id);
             sessionStorage.setItem('userId', newValue.id as string);
             setUser(newValue);
-            // Update user last seen every 30 seconds
+            // Update user last seen every 10 seconds
             userLastSeenInterval = setInterval(async () => {
                 await updateUserLastSeenById(newValue.id);
-            }, 30000);
+            }, 10000);
         }
     }
 
@@ -76,7 +76,7 @@ export default function Room() {
                 const result = await fetchUser();
                 if (result) {
                     setUser(result);
-                    // Update user last seen every 30 seconds
+                    // Update user last seen every 10 seconds
                     userLastSeenInterval = setInterval(async () => {
                         await updateUserLastSeenById(result.id);
                     }, 10000);
