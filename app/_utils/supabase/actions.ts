@@ -1,6 +1,8 @@
 'use server'
 
 import { supabaseClient } from "@/utils/supabase/client";
+import { CronJob } from 'cron';
+import { sub } from "date-fns/sub";
 
 export const createRoom = async () => {
     const { data: rooms, error } = await supabaseClient.from("rooms")
@@ -38,6 +40,7 @@ export const createUser = async (username: string, roomId: string) => {
         .upsert({
             username,
             room_id: roomId,
+            last_seen: new Date().toLocaleString()
         })
         .select();
 
@@ -65,3 +68,46 @@ export const deleteUserById = async (id: string) => {
     .delete()
     .eq('id', id);
 }
+
+export const updateUserLastSeenById = async (id: string) => {
+    const currentTime = new Date().toLocaleString();
+    const { data: users, error } = await supabaseClient.from("users")
+        .update({ last_seen: currentTime })
+        .eq('id', id)
+        .select();
+
+    console.log(error);
+    return users && users?.length > 0 ? users.at(0) : null;
+}
+
+// Cron job that runs every 2 minutes
+// To clean up users last seen 5 minutes ago
+const cleanInactiveUsersCronJob = new CronJob('*/2 * * * *', async() => {
+    const fiveMinutesAgo = sub(new Date(), { minutes: 5 }).toLocaleString();
+    const { data: inactiveUsers, error } = await supabaseClient.from("users")
+        .select()
+        .lt('last_seen', fiveMinutesAgo);
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    console.log(`Cleaning ${inactiveUsers?.length} inactive users`);
+    console.log(`Users last seen less than ${fiveMinutesAgo} minutes ago`);
+    if (inactiveUsers && inactiveUsers?.length > 0) {
+        const { error: deleteError } = await supabaseClient.from("users")
+            .delete()
+            .in('id', inactiveUsers.map(user => user.id));
+
+        if (deleteError) {
+            throw new Error(deleteError.message);
+        }
+    }
+})
+
+if (!cleanInactiveUsersCronJob.isActive) {
+    cleanInactiveUsersCronJob.start();
+}
+
+// TODO: Fetch users last seen for more than 10 minutes
+// TODO: Delete users last seen for more than 10 minutes

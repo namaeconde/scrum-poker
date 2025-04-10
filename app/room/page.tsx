@@ -1,7 +1,7 @@
 'use client'
 
-import { createUser, fetchUserById, updateRoomStatusById } from '@/utils/supabase/actions';
-import { useSearchParams } from 'next/navigation';
+import { createUser, fetchUserById, updateRoomStatusById, updateUserLastSeenById } from '@/utils/supabase/actions';
+import {redirect, useSearchParams} from 'next/navigation';
 import { useEffect, useState } from "react";
 import Input from "@/components/input";
 import Button from "@/components/button";
@@ -17,17 +17,19 @@ const fetchRoom = async (roomId: string | null) => {
     }
 
     if (roomId) {
-        const newRoom = await updateRoomStatusById(roomId, 'active');
-        sessionStorage.setItem('room', JSON.stringify(newRoom));
-        return newRoom;
+        const result = await updateRoomStatusById(roomId, 'active');
+        if (!result.error) {
+            sessionStorage.setItem('room', JSON.stringify(result));
+            return result;
+        }
     }
 }
 
 const leaveRoom = () => {
-    if (document.visibilityState === "hidden" && sessionStorage.getItem('isClosing') === 'true') {
-        const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
-        const existingUserId = sessionStorage.getItem('userId');
-        navigator.sendBeacon(`/api/room/leave?id=${existingRoom?.id}`, JSON.stringify({ userId: existingUserId}));
+    const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
+    const existingUserId = sessionStorage.getItem('userId');
+    if (existingRoom?.id && existingUserId) {
+        navigator.sendBeacon(`/api/room/leave?roomId=${existingRoom.id}&userId=${existingUserId}`);
     }
 }
 
@@ -49,42 +51,49 @@ export default function Room() {
     const [user, setUser] = useState<UserType>();
     const [debouncedUsername] = useDebounce(username, 500);
 
+    let userLastSeenInterval: NodeJS.Timeout;
+
     const handleCreateUser = async () => {
         if (debouncedUsername && room?.id) {
             const newValue = await createUser(debouncedUsername, room.id);
             sessionStorage.setItem('userId', newValue.id as string);
             setUser(newValue);
+            // Update user last seen every 30 seconds
+            userLastSeenInterval = setInterval(async () => {
+                await updateUserLastSeenById(newValue.id);
+            }, 30000);
         }
     }
 
     useEffect(() => {
         (async () => {
             if (!room) {
-                const room = await fetchRoom(roomId);
-                setRoom(room);
+                const result = await fetchRoom(roomId);
+                if (result) setRoom(result);
             }
 
-            const user = await fetchUser();
-            setUser(user);
+            if (!user) {
+                const result = await fetchUser();
+                if (result) {
+                    setUser(result);
+                    // Update user last seen every 30 seconds
+                    userLastSeenInterval = setInterval(async () => {
+                        await updateUserLastSeenById(result.id);
+                    }, 10000);
+                }
+            }
             setIsLoading(false);
         })();
 
-        window.addEventListener('beforeunload', (e) => {
-            e.preventDefault();
-            sessionStorage.setItem('isClosing', 'true');
-            setTimeout(() => {
-                sessionStorage.removeItem('isClosing');
-            }, 1000); // Slight delay to ensure the flag is cleared on refresh
-        });
+        return () => {
+            clearInterval(userLastSeenInterval);
+        }
 
-        document.onvisibilitychange = () => {
-            leaveRoom();
-        };
     }, [room]);
 
     return (
         isLoading ? <div>Loading...</div> :
-            room && user ? <Table room={room} currentUser={user} /> :
+            room ? user ? <Table room={room} currentUser={user} /> :
                 <div className="p-4 sm:p-5 sm:w-auto shadow-md inset-shadow-sm">
                     <div className="flex gap-4 items-center flex-col">
                         <Input label="Input your username"
@@ -103,6 +112,10 @@ export default function Room() {
                             <Button text="Submit" isDisabled={!username} onClick={() => handleCreateUser()}/>
                         </div>
                     </div>
+                </div> :
+                <div className="flex gap-4 items-center flex-col">
+                    <span>Room does not exists</span>
+                    <Button text="Back" onClick={() => redirect("/")}/>
                 </div>
     )
 }
