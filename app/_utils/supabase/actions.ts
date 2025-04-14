@@ -80,10 +80,10 @@ export const updateUserLastSeenById = async (id: string) => {
     return users && users?.length > 0 ? users.at(0) : null;
 }
 
-// Cron job that runs every 2 minutes
-// To clean up users last seen 5 minutes ago
-const cleanInactiveUsersCronJob = new CronJob('*/2 * * * *', async() => {
-    const fiveMinutesAgo = sub(new Date(), { minutes: 5 }).toLocaleString();
+// Cron job that runs every 20 seconds
+// To clean up users last seen 20 seconds ago
+const cleanInactiveUsersCronJob = new CronJob('*/20 * * * * *', async() => {
+    const fiveMinutesAgo = sub(new Date(), { seconds: 20 }).toLocaleString();
     const { data: inactiveUsers, error } = await supabaseClient.from("users")
         .select()
         .lt('last_seen', fiveMinutesAgo);
@@ -93,7 +93,7 @@ const cleanInactiveUsersCronJob = new CronJob('*/2 * * * *', async() => {
     }
 
     console.log(`Cleaning ${inactiveUsers?.length} inactive users`);
-    console.log(`Users last seen less than ${fiveMinutesAgo} minutes ago`);
+    console.log(`Users last seen less than ${fiveMinutesAgo} seconds ago`);
     if (inactiveUsers && inactiveUsers?.length > 0) {
         const { error: deleteError } = await supabaseClient.from("users")
             .delete()

@@ -58,6 +58,7 @@ export default function Room() {
             const newValue = await createUser(debouncedUsername, room.id);
             sessionStorage.setItem('userId', newValue.id as string);
             setUser(newValue);
+            
             // Update user last seen every 10 seconds
             userLastSeenInterval = setInterval(async () => {
                 await updateUserLastSeenById(newValue.id);
