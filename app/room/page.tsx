@@ -9,6 +9,7 @@ import { useDebounce } from "use-debounce";
 import Table from "@/components/table";
 import { RoomType } from "@/types/RoomType";
 import { UserType } from "@/types/UserType";
+import { LAST_SEEN_POLLING_TIMER, DEBOUNCE_DELAY } from "@/utils/Constants";
 
 const fetchRoom = async (roomId: string | null) => {
     const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
@@ -49,7 +50,7 @@ export default function Room() {
     const [room, setRoom] = useState<RoomType>();
     const [username, setUsername] = useState<string>();
     const [user, setUser] = useState<UserType>();
-    const [debouncedUsername] = useDebounce(username, 500);
+    const [debouncedUsername] = useDebounce(username, DEBOUNCE_DELAY);
 
     let userLastSeenInterval: NodeJS.Timeout;
 
@@ -59,10 +60,10 @@ export default function Room() {
             sessionStorage.setItem('userId', newValue.id as string);
             setUser(newValue);
             
-            // Update user last seen every 10 seconds
+            // Update user last seen every second
             userLastSeenInterval = setInterval(async () => {
                 await updateUserLastSeenById(newValue.id);
-            }, 10000);
+            }, LAST_SEEN_POLLING_TIMER);
         }
     }
 
@@ -77,17 +78,20 @@ export default function Room() {
                 const result = await fetchUser();
                 if (result) {
                     setUser(result);
-                    // Update user last seen every 10 seconds
+                    // Update user last seen every second
                     userLastSeenInterval = setInterval(async () => {
                         await updateUserLastSeenById(result.id);
-                    }, 10000);
+                    }, LAST_SEEN_POLLING_TIMER);
                 }
             }
             setIsLoading(false);
         })();
 
         return () => {
-            clearInterval(userLastSeenInterval);
+            if (userLastSeenInterval) {
+                clearInterval(userLastSeenInterval);
+                leaveRoom();
+            }
         }
 
     }, [room]);

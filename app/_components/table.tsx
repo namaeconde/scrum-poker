@@ -28,8 +28,12 @@ const Player = ({ username, isCurrentUser}: PlayerProps) => {
 }
 
 export default function Table({ room, currentUser }: TableProps) {
+    const [currentStatus, setCurrentStatus] = useState<string>("Cast your vote");
+    const [currentVote, setCurrentVote] = useState<number>(0);
     const [otherPlayers, setOtherPlayers] = useState<PlayerProps[]>([]);
-    const scrumScoring = ["1","2","3","5","8"];
+    const [isLockedIn, setIsLockedIn] = useState(false);
+
+    const scrumScoring = [1,2,3,5,8];
 
     useEffect(() => {
         (async () => {
@@ -43,7 +47,7 @@ export default function Table({ room, currentUser }: TableProps) {
         })();
     }, [room.id]);
 
-    const roomChanges = supabaseClient
+    supabaseClient
         .channel(`room_${room.id}`)
         .on(
             'postgres_changes',
@@ -70,31 +74,59 @@ export default function Table({ room, currentUser }: TableProps) {
                 setOtherPlayers(prev => [...prev, payload.new as PlayerProps]);
             }
         )
+        .on(
+            'postgres_changes',
+            { 
+                event: 'INSERT',
+                schema: 'public', 
+                table: 'votes',
+                filter: `room_id=eq.${room.id}`
+            },
+            (payload) => {
+                console.log(payload);
+                // TODO: Start a timer to show the results if all players have voted
+                // Clear the votes from the db after the timer is up
+            }
+        )
         .subscribe()
 
+    const handleVote = () => {
+        setIsLockedIn(!isLockedIn)
+        if (isLockedIn) {
+            // TODO: Add current vote to db
+            console.log(`${currentUser.username} Locked in vote: ${currentVote}`)
+        } else {
+            // TODO: Remove current vote from db
+            console.log(`${currentUser.username} Unlocked vote`)
+        }
+    }
+
     return (
-        <div className="flex flex-col items-center gap-10">
-            <div className="flex gap-2">
-                {
-                    otherPlayers && otherPlayers.length > 0 ? otherPlayers.map(player => {
-                        return (<Player username={player.username} key={player.id}  id={player.id}/>)
-                    }): <div>Waiting for other players...</div>
-                }
-            </div>
-            <div className="border-2 border-dotted p-20">
-                Cast your votes
-            </div>
-            <div className="flex flex-col items-center gap-5">
+        <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2 flex flex-col items-center gap-10">
                 <div className="flex gap-2">
                     {
-                        scrumScoring.map((value) => {
-                            return (
-                                <Button key={value} text={value}/>
-                            )
-                        })
+                        otherPlayers && otherPlayers.length > 0 ? otherPlayers.map(player => {
+                            return (<Player username={player.username} key={player.id}  id={player.id}/>)
+                        }): <div>Waiting for other players...</div>
                     }
                 </div>
-                <Player username={currentUser.username} isCurrentUser={true}/>
+                <div className="border-2 border-dotted p-20">{currentStatus}</div>
+                <div className="flex flex-col items-center gap-5">
+                    <div className="flex gap-2">
+                        {
+                            scrumScoring.map((value) => {
+                                return (
+                                    <Button key={value} text={value.toString()} isDisabled={isLockedIn} onClick={() => setCurrentVote(value)}/>
+                                )
+                            })
+                        }
+                    </div>
+                    <div className="flex gap-2">
+                        <Button text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => handleVote()} />
+                    </div>
+                    <Player username={currentUser.username} isCurrentUser={true}/>
+                </div>
             </div>
         </div>
     )
