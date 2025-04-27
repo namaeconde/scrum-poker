@@ -1,6 +1,6 @@
 'use client'
 
-import Button from "@/components/button";
+import ButtonComponent from "@/components/button/button.component";
 import { createRoom } from '@/utils/supabase/actions';
 import { redirect } from 'next/navigation'
 
@@ -19,7 +19,7 @@ export default function Home() {
               <li className="tracking-[-.01em]">Cast your vote</li>
           </ol>
           <div className="flex gap-4 items-center flex-col">
-              <Button text="Create room" onClick={() => handleCreateRoom()}/>
+              <ButtonComponent text="Create room" onClick={() => handleCreateRoom()}/>
           </div>
       </>
   );

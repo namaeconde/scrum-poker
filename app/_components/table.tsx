@@ -1,12 +1,13 @@
 'use client'
 
 import { RoomType } from "@/types/RoomType";
-import Button from "@/components/button";
+import ButtonComponent from "@/components/button/button.component";
 import { UserType } from "@/types/UserType";
 import { User } from 'lucide-react';
 import { supabaseClient } from "@/utils/supabase/client";
 import { fetchUsersByRoomId } from "@/utils/supabase/actions";
 import { useEffect, useState } from "react";
+import RadioGroup from "@/components/radio-group";
 
 interface TableProps {
     room: RoomType;
@@ -28,12 +29,18 @@ const Player = ({ username, isCurrentUser}: PlayerProps) => {
 }
 
 export default function Table({ room, currentUser }: TableProps) {
-    const [currentStatus, setCurrentStatus] = useState<string>("Cast your vote");
-    const [currentVote, setCurrentVote] = useState<number>(0);
+    const [currentStatus] = useState<string>("Cast your vote");
+    const [currentVote] = useState<number>(0);
     const [otherPlayers, setOtherPlayers] = useState<PlayerProps[]>([]);
     const [isLockedIn, setIsLockedIn] = useState(false);
 
-    const scrumScoring = [1,2,3,5,8];
+    const scrumScoring = [
+        { name: "1", value: "1" },
+        { name: "2", value: "2" },
+        { name: "3", value: "3" },
+        { name: "5", value: "5" },
+        { name: "8", value: "8" },
+    ];
 
     useEffect(() => {
         (async () => {
@@ -114,16 +121,10 @@ export default function Table({ room, currentUser }: TableProps) {
                 <div className="border-2 border-dotted p-20">{currentStatus}</div>
                 <div className="flex flex-col items-center gap-5">
                     <div className="flex gap-2">
-                        {
-                            scrumScoring.map((value) => {
-                                return (
-                                    <Button key={value} text={value.toString()} isDisabled={isLockedIn} onClick={() => setCurrentVote(value)}/>
-                                )
-                            })
-                        }
+                        <RadioGroup radioButtons={scrumScoring} />
                     </div>
                     <div className="flex gap-2">
-                        <Button text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => handleVote()} />
+                        <ButtonComponent text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => handleVote()} />
                     </div>
                     <Player username={currentUser.username} isCurrentUser={true}/>
                 </div>

@@ -4,7 +4,7 @@ interface ButtonProps {
     isDisabled?: boolean;
 }
 
-export default function Button({ text, onClick, isDisabled }: ButtonProps) {
+export default function ButtonComponent({ text, onClick, isDisabled }: ButtonProps) {
     return (
         <button
             disabled={isDisabled}

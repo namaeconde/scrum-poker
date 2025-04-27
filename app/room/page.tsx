@@ -4,7 +4,7 @@ import { createUser, fetchUserById, updateRoomStatusById, updateUserLastSeenById
 import {redirect, useSearchParams} from 'next/navigation';
 import { useEffect, useState } from "react";
 import Input from "@/components/input";
-import Button from "@/components/button";
+import ButtonComponent from "@/components/button/button.component";
 import { useDebounce } from "use-debounce";
 import Table from "@/components/table";
 import { RoomType } from "@/types/RoomType";
@@ -113,14 +113,14 @@ export default function Room() {
                                }}
                         />
                         <div className="flex gap-2">
-                            <Button text="Cancel" onClick={() => leaveRoom()}/>
-                            <Button text="Submit" isDisabled={!username} onClick={() => handleCreateUser()}/>
+                            <ButtonComponent text="Cancel" onClick={() => leaveRoom()}/>
+                            <ButtonComponent text="Submit" isDisabled={!username} onClick={() => handleCreateUser()}/>
                         </div>
                     </div>
                 </div> :
                 <div className="flex gap-4 items-center flex-col">
                     <span>Room does not exists</span>
-                    <Button text="Back" onClick={() => redirect("/")}/>
+                    <ButtonComponent text="Back" onClick={() => redirect("/")}/>
                 </div>
     )
 }
