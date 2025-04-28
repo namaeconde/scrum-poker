@@ -7,7 +7,7 @@ import { User } from 'lucide-react';
 import { supabaseClient } from "@/utils/supabase/client";
 import { fetchUsersByRoomId } from "@/utils/supabase/actions";
 import { useEffect, useState } from "react";
-import RadioGroup from "@/components/radio-group";
+import RadioGroupComponent from "@/components/radio-group/radio-group.component";
 
 interface TableProps {
     room: RoomType;
@@ -28,7 +28,7 @@ const Player = ({ username, isCurrentUser}: PlayerProps) => {
     )
 }
 
-export default function Table({ room, currentUser }: TableProps) {
+export default function TableTopComponent({ room, currentUser }: TableProps) {
     const [currentStatus] = useState<string>("Cast your vote");
     const [currentVote] = useState<number>(0);
     const [otherPlayers, setOtherPlayers] = useState<PlayerProps[]>([]);
@@ -121,7 +121,7 @@ export default function Table({ room, currentUser }: TableProps) {
                 <div className="border-2 border-dotted p-20">{currentStatus}</div>
                 <div className="flex flex-col items-center gap-5">
                     <div className="flex gap-2">
-                        <RadioGroup radioButtons={scrumScoring} />
+                        <RadioGroupComponent radioButtons={scrumScoring} />
                     </div>
                     <div className="flex gap-2">
                         <ButtonComponent text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => handleVote()} />

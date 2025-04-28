@@ -3,10 +3,10 @@
 import { createUser, fetchUserById, updateRoomStatusById, updateUserLastSeenById } from '@/utils/supabase/actions';
 import {redirect, useSearchParams} from 'next/navigation';
 import { useEffect, useState } from "react";
-import Input from "@/components/input";
+import InputComponent from "@/components/input/input.component";
 import ButtonComponent from "@/components/button/button.component";
 import { useDebounce } from "use-debounce";
-import Table from "@/components/table";
+import TableTopComponent from "@/components/table-top/table-top.component";
 import { RoomType } from "@/types/RoomType";
 import { UserType } from "@/types/UserType";
 import { LAST_SEEN_POLLING_TIMER, DEBOUNCE_DELAY } from "@/utils/Constants";
@@ -98,15 +98,15 @@ export default function Room() {
 
     return (
         isLoading ? <div>Loading...</div> :
-            room ? user ? <Table room={room} currentUser={user} /> :
+            room ? user ? <TableTopComponent room={room} currentUser={user} /> :
                 <div className="p-4 sm:p-5 sm:w-auto shadow-md inset-shadow-sm">
                     <div className="flex gap-4 items-center flex-col">
-                        <Input label="Input your username"
-                               defaultValue=""
-                               onChange={(e) => {
+                        <InputComponent label="Enter your username"
+                                        defaultValue=""
+                                        onChange={(e) => {
                                    setUsername(e.target.value)
                                }}
-                               onKeyDown={(e) => {
+                                        onKeyDown={(e) => {
                                    if (e.code === 'Enter') {
                                        handleCreateUser();
                                    }
