@@ -52,7 +52,7 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                 setOtherPlayers(otherPlayers);
             }
         })();
-    }, [room.id]);
+    }, [room.id, currentUser.id]);
 
     supabaseClient
         .channel(`room_${room.id}`)
@@ -64,8 +64,9 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
               table: 'users'
             },
             (payload) => {
-                console.log(payload);
-                setOtherPlayers(prev => prev.filter(player => player.id !== payload.old.id));
+                if (payload.old) {
+                    setOtherPlayers(prev => prev.filter(player => player.id !== payload.old.id));
+                }
             }
         )
         .on(
@@ -77,8 +78,9 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                 filter: `room_id=eq.${room.id}`
             },
             (payload) => {
-                console.log(payload);
-                setOtherPlayers(prev => [...prev, payload.new as PlayerProps]);
+                if (payload.new) {
+                    setOtherPlayers(prev => [...prev, payload.new as PlayerProps]);
+                }
             }
         )
         .on(
@@ -89,8 +91,7 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                 table: 'votes',
                 filter: `room_id=eq.${room.id}`
             },
-            (payload) => {
-                console.log(payload);
+            () => {
                 // TODO: Start a timer to show the results if all players have voted
                 // Clear the votes from the db after the timer is up
             }
@@ -121,7 +122,7 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                 <div className="border-2 border-dotted p-20">{currentStatus}</div>
                 <div className="flex flex-col items-center gap-5">
                     <div className="flex gap-2">
-                        <RadioGroupComponent radioButtons={scrumScoring} />
+                        <RadioGroupComponent radioButtons={scrumScoring} isDisabled={isLockedIn}/>
                     </div>
                     <div className="flex gap-2">
                         <ButtonComponent text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => handleVote()} />

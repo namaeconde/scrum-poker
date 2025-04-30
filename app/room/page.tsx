@@ -1,8 +1,8 @@
 'use client'
 
 import { createUser, fetchUserById, updateRoomStatusById, updateUserLastSeenById } from '@/utils/supabase/actions';
-import {redirect, useSearchParams} from 'next/navigation';
-import { useEffect, useState } from "react";
+import { redirect, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from "react";
 import InputComponent from "@/components/input/input.component";
 import ButtonComponent from "@/components/button/button.component";
 import { useDebounce } from "use-debounce";
@@ -43,7 +43,7 @@ const fetchUser = async () => {
     return null;
 }
 
-export default function Room() {
+const LoadRoom = () => {
     const searchParams = useSearchParams();
     const roomId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -52,16 +52,16 @@ export default function Room() {
     const [user, setUser] = useState<UserType>();
     const [debouncedUsername] = useDebounce(username, DEBOUNCE_DELAY);
 
-    let userLastSeenInterval: NodeJS.Timeout;
+    const userLastSeenInterval = useRef<NodeJS.Timeout | null>(null);
 
     const handleCreateUser = async () => {
         if (debouncedUsername && room?.id) {
             const newValue = await createUser(debouncedUsername, room.id);
             sessionStorage.setItem('userId', newValue.id as string);
             setUser(newValue);
-            
+
             // Update user last seen every second
-            userLastSeenInterval = setInterval(async () => {
+            userLastSeenInterval.current = setInterval(async () => {
                 await updateUserLastSeenById(newValue.id);
             }, LAST_SEEN_POLLING_TIMER);
         }
@@ -79,48 +79,64 @@ export default function Room() {
                 if (result) {
                     setUser(result);
                     // Update user last seen every second
-                    userLastSeenInterval = setInterval(async () => {
+                    userLastSeenInterval.current = setInterval(async () => {
                         await updateUserLastSeenById(result.id);
                     }, LAST_SEEN_POLLING_TIMER);
                 }
             }
-            setIsLoading(false);
+
+            if (isLoading) {
+                setIsLoading(false);
+            }
         })();
 
         return () => {
-            if (userLastSeenInterval) {
-                clearInterval(userLastSeenInterval);
-                leaveRoom();
+            if (userLastSeenInterval.current) {
+                clearInterval(userLastSeenInterval.current);
             }
         }
 
     }, [room]);
 
     return (
-        isLoading ? <div>Loading...</div> :
-            room ? user ? <TableTopComponent room={room} currentUser={user} /> :
+        <>
+            {isLoading && <div>Loading...</div>}
+            {!room &&
+                <div className="flex gap-4 items-center flex-col">
+                    <span>Room does not exists</span>
+                    <ButtonComponent text="Back" onClick={() => redirect("/")}/>
+                </div>
+            }
+            {room && !user &&
                 <div className="p-4 sm:p-5 sm:w-auto shadow-md inset-shadow-sm">
                     <div className="flex gap-4 items-center flex-col">
                         <InputComponent label="Enter your username"
                                         defaultValue=""
                                         onChange={(e) => {
-                                   setUsername(e.target.value)
-                               }}
+                                            setUsername(e.target.value)
+                                        }}
                                         onKeyDown={(e) => {
-                                   if (e.code === 'Enter') {
-                                       handleCreateUser();
-                                   }
-                               }}
+                                            if (e.code === 'Enter') {
+                                                handleCreateUser();
+                                            }
+                                        }}
                         />
                         <div className="flex gap-2">
                             <ButtonComponent text="Cancel" onClick={() => leaveRoom()}/>
                             <ButtonComponent text="Submit" isDisabled={!username} onClick={() => handleCreateUser()}/>
                         </div>
                     </div>
-                </div> :
-                <div className="flex gap-4 items-center flex-col">
-                    <span>Room does not exists</span>
-                    <ButtonComponent text="Back" onClick={() => redirect("/")}/>
                 </div>
+            }
+            {room && user && <TableTopComponent room={room} currentUser={user}/>}
+        </>
+    )
+}
+
+export default function Room() {
+    return (
+        <Suspense fallback={null}>
+            <LoadRoom />
+        </Suspense>
     )
 }

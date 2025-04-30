@@ -9,7 +9,7 @@ interface RadioGroupProps {
 
 export default function RadioGroupComponent({ radioButtons, isDisabled }: RadioGroupProps) {
     return (
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${isDisabled && 'opacity-40'}`}>
             {radioButtons.map(({name, value, isChecked}, i) => {
                 return (
                     <div key={i} className="flex items-center me-4">
