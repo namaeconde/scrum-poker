@@ -1,15 +1,15 @@
 'use client'
 
-import { createUser, fetchUserById, updateRoomStatusById, updateUserLastSeenById } from '@/utils/supabase/actions';
+import { createUser, fetchUserById, updateRoomStatusById } from '@/utils/supabase/actions';
 import { redirect, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import InputComponent from "@/components/input/input.component";
 import ButtonComponent from "@/components/button/button.component";
 import { useDebounce } from "use-debounce";
 import TableTopComponent from "@/components/table-top/table-top.component";
 import { RoomType } from "@/types/RoomType";
 import { UserType } from "@/types/UserType";
-import { LAST_SEEN_POLLING_TIMER, DEBOUNCE_DELAY } from "@/utils/Constants";
+import { DEBOUNCE_DELAY } from "@/utils/Constants";
 
 const fetchRoom = async (roomId: string | null) => {
     const existingRoom = JSON.parse(sessionStorage.getItem('room') as string);
@@ -52,18 +52,11 @@ const LoadRoom = () => {
     const [user, setUser] = useState<UserType>();
     const [debouncedUsername] = useDebounce(username, DEBOUNCE_DELAY);
 
-    const userLastSeenInterval = useRef<NodeJS.Timeout | null>(null);
-
     const handleCreateUser = async () => {
         if (debouncedUsername && room?.id) {
             const newValue = await createUser(debouncedUsername, room.id);
             sessionStorage.setItem('userId', newValue.id as string);
             setUser(newValue);
-
-            // Update user last seen every second
-            userLastSeenInterval.current = setInterval(async () => {
-                await updateUserLastSeenById(newValue.id);
-            }, LAST_SEEN_POLLING_TIMER);
         }
     }
 
@@ -78,10 +71,6 @@ const LoadRoom = () => {
                 const result = await fetchUser();
                 if (result) {
                     setUser(result);
-                    // Update user last seen every second
-                    userLastSeenInterval.current = setInterval(async () => {
-                        await updateUserLastSeenById(result.id);
-                    }, LAST_SEEN_POLLING_TIMER);
                 }
             }
 
@@ -89,12 +78,6 @@ const LoadRoom = () => {
                 setIsLoading(false);
             }
         })();
-
-        return () => {
-            if (userLastSeenInterval.current) {
-                clearInterval(userLastSeenInterval.current);
-            }
-        }
 
     }, [room]);
 
@@ -115,9 +98,9 @@ const LoadRoom = () => {
                                         onChange={(e) => {
                                             setUsername(e.target.value)
                                         }}
-                                        onKeyDown={(e) => {
+                                        onKeyDown={ async (e) => {
                                             if (e.code === 'Enter') {
-                                                handleCreateUser();
+                                                await handleCreateUser();
                                             }
                                         }}
                         />

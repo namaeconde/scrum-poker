@@ -4,10 +4,15 @@ import { RoomType } from "@/types/RoomType";
 import ButtonComponent from "@/components/button/button.component";
 import { UserType } from "@/types/UserType";
 import { User } from 'lucide-react';
-import { supabaseClient } from "@/utils/supabase/client";
+import { createChannel } from "@/utils/supabase/client";
 import { fetchUsersByRoomId } from "@/utils/supabase/actions";
 import { useEffect, useState } from "react";
 import RadioGroupComponent from "@/components/radio-group/radio-group.component";
+import {
+    REALTIME_LISTEN_TYPES,
+    REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
+    REALTIME_PRESENCE_LISTEN_EVENTS
+} from "@supabase/realtime-js";
 
 interface TableProps {
     room: RoomType;
@@ -33,6 +38,7 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
     const [currentVote] = useState<number>(0);
     const [otherPlayers, setOtherPlayers] = useState<PlayerProps[]>([]);
     const [isLockedIn, setIsLockedIn] = useState(false);
+    const roomChannel = createChannel(`room_${room.id}`);
 
     const scrumScoring = [
         { name: "1", value: "1" },
@@ -51,52 +57,78 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
             if (otherPlayers) {
                 setOtherPlayers(otherPlayers);
             }
-        })();
-    }, [room.id, currentUser.id]);
 
-    supabaseClient
-        .channel(`room_${room.id}`)
-        .on(
-            'postgres_changes',
-            {
-              event: 'DELETE',
-              schema: 'public',
-              table: 'users'
-            },
-            (payload) => {
-                if (payload.old) {
-                    setOtherPlayers(prev => prev.filter(player => player.id !== payload.old.id));
+            if (roomChannel) {
+                const userStatus = {
+                    id: currentUser.id,
+                    username: currentUser.username,
                 }
+
+                roomChannel
+                    .on(
+                        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+                        {
+                            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.DELETE,
+                            schema: 'public',
+                            table: 'users'
+                        },
+                        (payload) => {
+                            if (payload.old) {
+                                setOtherPlayers(prev => prev.filter(player => player.id !== payload.old.id));
+                            }
+                        }
+                    )
+                    .on(
+                        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+                        {
+                            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.INSERT,
+                            schema: 'public',
+                            table: 'users',
+                            filter: `room_id=eq.${room.id}`
+                        },
+                        (payload) => {
+                            if (payload.new) {
+                                setOtherPlayers(prev => [...prev, payload.new as PlayerProps]);
+                            }
+                        }
+                    )
+                    .on(
+                        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+                        {
+                            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.INSERT,
+                            schema: 'public',
+                            table: 'votes',
+                            filter: `room_id=eq.${room.id}`
+                        },
+                        () => {
+                            // TODO: Start a timer to show the results if all players have voted
+                            // Clear the votes from the db after the timer is up
+                        }
+                    )
+                    .on(REALTIME_LISTEN_TYPES.PRESENCE, { event: REALTIME_PRESENCE_LISTEN_EVENTS.JOIN }, ({ key, newPresences }) => {
+                        console.log('join', key, newPresences);
+                    })
+                    .on(REALTIME_LISTEN_TYPES.PRESENCE, { event: REALTIME_PRESENCE_LISTEN_EVENTS.LEAVE },
+                        async ({ leftPresences }) => {
+                        const inactiveUserId = leftPresences.map(value => value.id)?.at(0);
+                        navigator.sendBeacon(`/api/room/leave?roomId=${room.id}&userId=${inactiveUserId}`);
+
+                    })
+                    .subscribe(async (status) => {
+                        if (status !== 'SUBSCRIBED') { return }
+                        const presenceTrackStatus = await roomChannel.track(userStatus)
+                        console.log(presenceTrackStatus)
+                    })
             }
-        )
-        .on(
-            'postgres_changes',
-            { 
-                event: 'INSERT',
-                schema: 'public', 
-                table: 'users',
-                filter: `room_id=eq.${room.id}`
-            },
-            (payload) => {
-                if (payload.new) {
-                    setOtherPlayers(prev => [...prev, payload.new as PlayerProps]);
-                }
-            }
-        )
-        .on(
-            'postgres_changes',
-            { 
-                event: 'INSERT',
-                schema: 'public', 
-                table: 'votes',
-                filter: `room_id=eq.${room.id}`
-            },
-            () => {
-                // TODO: Start a timer to show the results if all players have voted
-                // Clear the votes from the db after the timer is up
-            }
-        )
-        .subscribe()
+        })();
+
+        return () => {
+            roomChannel.untrack().then((presenceUntrackStatus) => {
+                console.log("presence untracked");
+                console.log(presenceUntrackStatus)
+            })
+        }
+    }, [room.id, currentUser.id]);
 
     const handleVote = () => {
         setIsLockedIn(!isLockedIn)

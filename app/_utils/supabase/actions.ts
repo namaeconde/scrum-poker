@@ -1,9 +1,6 @@
 'use server'
 
 import { supabaseClient } from "@/utils/supabase/client";
-import { CronJob } from 'cron';
-import { sub } from "date-fns/sub";
-import { CLEANUP_USERS_CRON_TIME, CLEANUP_ROOMS_CRON_TIME, INACTIVE_SECONDS } from "@/utils/Constants";
 
 export const createRoom = async () => {
     const { data: rooms, error } = await supabaseClient.from("rooms")
@@ -88,48 +85,4 @@ export const updateUserLastSeenById = async (id: string) => {
 
     console.log(error);
     return users && users?.length > 0 ? users.at(0) : null;
-}
-
-// Cron job that runs every 3 seconds
-// To clean up users last seen 3 seconds ago
-const cleanInactiveUsersCronJob = new CronJob(CLEANUP_USERS_CRON_TIME, async() => {
-    const secondsAgo = sub(new Date(), { seconds: INACTIVE_SECONDS }).toLocaleString();
-    const { data: inactiveUsers, error } = await supabaseClient.from("users")
-        .select()
-        .lt('last_seen', secondsAgo);
-
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    console.log(`Cleaning ${inactiveUsers?.length} inactive users`);
-    console.log(`Users last seen less than ${secondsAgo} seconds ago`);
-    if (inactiveUsers && inactiveUsers?.length > 0) {
-        await deleteUsersByIds(inactiveUsers.map(user => user.id));
-    }
-})
-
-// Cron job that runs every minute
-// To clean up empty rooms
-const cleanEmptyRoomsCronJob = new CronJob(CLEANUP_ROOMS_CRON_TIME, async() => {
-    const { data: rooms, error } = await supabaseClient
-        .from("rooms")
-        .select(`id, users()`)
-        .is("users", null);
-    if (error) {
-        throw new Error(error.message);
-    }
-
-    console.log(`Cleaning ${rooms.length} empty rooms`);
-    if (rooms.length > 0) {
-        await deleteRoomsByIds(rooms.map(room => room.id));
-    }
-})
-
-if (!cleanInactiveUsersCronJob.isActive) {
-    cleanInactiveUsersCronJob.start();
-}
-
-if (!cleanEmptyRoomsCronJob.isActive) {
-    cleanEmptyRoomsCronJob.start();
 }
