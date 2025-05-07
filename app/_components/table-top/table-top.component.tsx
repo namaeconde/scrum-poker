@@ -5,7 +5,6 @@ import ButtonComponent from "@/components/button/button.component";
 import { UserType } from "@/types/UserType";
 import { User } from 'lucide-react';
 import { createChannel } from "@/utils/supabase/client";
-import { fetchUsersByRoomId } from "@/utils/supabase/actions";
 import { useEffect, useState } from "react";
 import RadioGroupComponent from "@/components/radio-group/radio-group.component";
 import {
@@ -50,48 +49,8 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
 
     useEffect(() => {
         (async () => {
-            // Fetch other players already in the room
-            const allPlayers = await fetchUsersByRoomId(room.id);
-
-            const otherPlayers = allPlayers?.filter(player => player.id !== currentUser.id);
-            if (otherPlayers) {
-                setOtherPlayers(otherPlayers);
-            }
-
             if (roomChannel) {
-                const userStatus = {
-                    id: currentUser.id,
-                    username: currentUser.username,
-                }
-
                 roomChannel
-                    .on(
-                        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
-                        {
-                            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.DELETE,
-                            schema: 'public',
-                            table: 'users'
-                        },
-                        (payload) => {
-                            if (payload.old) {
-                                setOtherPlayers(prev => prev.filter(player => player.id !== payload.old.id));
-                            }
-                        }
-                    )
-                    .on(
-                        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
-                        {
-                            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.INSERT,
-                            schema: 'public',
-                            table: 'users',
-                            filter: `room_id=eq.${room.id}`
-                        },
-                        (payload) => {
-                            if (payload.new) {
-                                setOtherPlayers(prev => [...prev, payload.new as PlayerProps]);
-                            }
-                        }
-                    )
                     .on(
                         REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
                         {
@@ -105,19 +64,27 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                             // Clear the votes from the db after the timer is up
                         }
                     )
-                    .on(REALTIME_LISTEN_TYPES.PRESENCE, { event: REALTIME_PRESENCE_LISTEN_EVENTS.JOIN }, ({ key, newPresences }) => {
-                        console.log('join', key, newPresences);
+                    .on(REALTIME_LISTEN_TYPES.PRESENCE, { event: REALTIME_PRESENCE_LISTEN_EVENTS.JOIN },
+                        ({ newPresences }) => {
+                        const joinedUser = newPresences?.at(0);
+
+                        // Check if user who joined is another player
+                        if (joinedUser?.id !== currentUser.id) {
+                            // Add newly joined user to other players list
+                            setOtherPlayers(prev => [...prev, {...joinedUser} as PlayerProps])
+                        }
                     })
                     .on(REALTIME_LISTEN_TYPES.PRESENCE, { event: REALTIME_PRESENCE_LISTEN_EVENTS.LEAVE },
-                        async ({ leftPresences }) => {
-                        const inactiveUserId = leftPresences.map(value => value.id)?.at(0);
-                        navigator.sendBeacon(`/api/room/leave?roomId=${room.id}&userId=${inactiveUserId}`);
+                        ({ leftPresences }) => {
+                        const leftUserId = leftPresences.map(value => value.id)?.at(0);
+                        navigator.sendBeacon(`/api/room/leave?roomId=${room.id}&userId=${leftUserId}`);
+                        setOtherPlayers(prev => prev.filter(player => player.id !== leftUserId));
 
                     })
                     .subscribe(async (status) => {
                         if (status !== 'SUBSCRIBED') { return }
-                        const presenceTrackStatus = await roomChannel.track(userStatus)
-                        console.log(presenceTrackStatus)
+                        // Track current user's presence
+                        const presenceTrackStatus = await roomChannel.track(currentUser);
                     })
             }
         })();
