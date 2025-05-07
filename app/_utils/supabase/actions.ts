@@ -1,19 +1,14 @@
 'use server'
 
 import { supabaseClient } from "@/utils/supabase/client";
+import { CronJob } from "cron";
+import { CLEANUP_ROOMS_CRON_TIME } from "@/utils/Constants";
 
 export const createRoom = async () => {
     const { data: rooms, error } = await supabaseClient.from("rooms")
         .upsert({})
         .select();
     console.log(error);
-    return rooms && rooms?.length > 0 ? rooms.at(0) : { error: "Room doesn't exists" };
-}
-
-export const fetchRoomById = async (id: string) => {
-    const { data: rooms } = await supabaseClient.from("rooms")
-        .select()
-        .eq('id', id);
     return rooms && rooms?.length > 0 ? rooms.at(0) : { error: "Room doesn't exists" };
 }
 
@@ -25,12 +20,6 @@ export const updateRoomStatusById = async (id: string, status: 'active' | 'inact
 
     console.log(error);
     return rooms && rooms?.length > 0 ? rooms.at(0) : { error: "Room doesn't exists" };
-}
-
-export const deleteRoomsByIds = async (ids: string[]) => {
-    await supabaseClient.from("rooms")
-        .delete()
-        .in('id', ids);
 }
 
 export const createUser = async (username: string, roomId: string) => {
@@ -67,22 +56,12 @@ export const deleteUserById = async (id: string) => {
     .eq('id', id);
 }
 
-export const deleteUsersByIds = async (ids: string[]) => {
-    const { error: deleteError } = await supabaseClient.from("users")
+const cleanupInactiveRooms = new CronJob(CLEANUP_ROOMS_CRON_TIME, async() => {
+    await supabaseClient.from("rooms")
         .delete()
-        .in('id', ids);
+        .eq('status', 'inactive')
+})
 
-    if (deleteError) throw new Error(deleteError.message)
-
-}
-
-export const updateUserLastSeenById = async (id: string) => {
-    const currentTime = new Date().toLocaleString();
-    const { data: users, error } = await supabaseClient.from("users")
-        .update({ last_seen: currentTime })
-        .eq('id', id)
-        .select();
-
-    console.log(error);
-    return users && users?.length > 0 ? users.at(0) : null;
+if (!cleanupInactiveRooms.isActive) {
+    cleanupInactiveRooms.start();
 }
