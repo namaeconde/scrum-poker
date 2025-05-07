@@ -84,7 +84,7 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                     .subscribe(async (status) => {
                         if (status !== 'SUBSCRIBED') { return }
                         // Track current user's presence
-                        const presenceTrackStatus = await roomChannel.track(currentUser);
+                        await roomChannel.track(currentUser);
                     })
             }
         })();
