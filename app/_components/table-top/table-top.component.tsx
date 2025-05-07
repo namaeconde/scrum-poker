@@ -12,6 +12,7 @@ import {
     REALTIME_POSTGRES_CHANGES_LISTEN_EVENT,
     REALTIME_PRESENCE_LISTEN_EVENTS
 } from "@supabase/realtime-js";
+import { useTimer } from "react-timer-hook";
 
 interface TableProps {
     room: RoomType;
@@ -32,12 +33,32 @@ const Player = ({ username, isCurrentUser}: PlayerProps) => {
     )
 }
 
+const DEFAULT_TIMEOUT_SECONDS = 3;
+
 export default function TableTopComponent({ room, currentUser }: TableProps) {
-    const [currentStatus] = useState<string>("Cast your vote");
-    const [currentVote] = useState<number>(0);
+    const [currentStatus, setCurrentStatus] = useState<string>("Cast your vote");
+    const [currentVote, setCurrentVote] = useState<string>("1");
     const [otherPlayers, setOtherPlayers] = useState<PlayerProps[]>([]);
     const [isLockedIn, setIsLockedIn] = useState(false);
     const roomChannel = createChannel(`room_${room.id}`);
+    const getTimerInSeconds = (seconds: number) => {
+        const timer = new Date()
+        timer.setSeconds(timer.getSeconds() + seconds);
+        return timer;
+    }
+
+    const {
+        totalSeconds,
+        start,
+        restart,
+    } = useTimer({
+        expiryTimestamp: getTimerInSeconds(DEFAULT_TIMEOUT_SECONDS),
+        autoStart: false,
+        onExpire: () => {
+            // TODO: Add realtime broadcast of all votes
+            setCurrentStatus(`You voted ${currentVote}`);
+            setIsLockedIn(false);
+        }});
 
     const scrumScoring = [
         { name: "1", value: "1" },
@@ -97,16 +118,16 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
         }
     }, [room.id, currentUser.id]);
 
-    const handleVote = () => {
-        setIsLockedIn(!isLockedIn)
+    useEffect(() => {
+        // TODO: Update to only start timer if all players have already voted
         if (isLockedIn) {
-            // TODO: Add current vote to db
-            console.log(`${currentUser.username} Locked in vote: ${currentVote}`)
+            start();
+            console.log(`${currentUser.username} Locked in vote: ${currentVote}`);
         } else {
-            // TODO: Remove current vote from db
-            console.log(`${currentUser.username} Unlocked vote`)
+            restart(getTimerInSeconds(DEFAULT_TIMEOUT_SECONDS), false);
+            console.log(`${currentUser.username} Unlocked vote`);
         }
-    }
+    }, [isLockedIn]);
 
     return (
         <div className="grid grid-cols-3 gap-4">
@@ -118,13 +139,20 @@ export default function TableTopComponent({ room, currentUser }: TableProps) {
                         }): <div>Waiting for other players...</div>
                     }
                 </div>
-                <div className="border-2 border-dotted p-20">{currentStatus}</div>
+                <div className="border-2 border-dotted p-20">{ isLockedIn ? totalSeconds : currentStatus }</div>
                 <div className="flex flex-col items-center gap-5">
                     <div className="flex gap-2">
-                        <RadioGroupComponent radioButtons={scrumScoring} isDisabled={isLockedIn}/>
+                        <RadioGroupComponent
+                            radioButtons={scrumScoring}
+                            isDisabled={isLockedIn}
+                            onChange={(e) => {
+                                setCurrentVote(e.target.value);
+                            }}/>
                     </div>
                     <div className="flex gap-2">
-                        <ButtonComponent text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => handleVote()} />
+                        <ButtonComponent text={isLockedIn ? 'Unlock Vote' : 'Lock-in Vote'} onClick={() => {
+                            setIsLockedIn(!isLockedIn)}}
+                        />
                     </div>
                     <Player username={currentUser.username} isCurrentUser={true}/>
                 </div>

@@ -84,13 +84,13 @@ const LoadRoom = () => {
     return (
         <>
             {isLoading && <div>Loading...</div>}
-            {!room &&
+            {!isLoading && !room &&
                 <div className="flex gap-4 items-center flex-col">
                     <span>Room does not exists</span>
                     <ButtonComponent text="Back" onClick={() => redirect("/")}/>
                 </div>
             }
-            {room && !user &&
+            {!isLoading && room && !user &&
                 <div className="p-4 sm:p-5 sm:w-auto shadow-md inset-shadow-sm">
                     <div className="flex gap-4 items-center flex-col">
                         <InputComponent label="Enter your username"
