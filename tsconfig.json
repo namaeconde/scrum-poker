@@ -22,7 +22,8 @@
     "paths": {
       "@/components/*": ["app/_components/*"],
       "@/utils/*": ["app/_utils/*"],
-      "@/types/*": ["app/_types/*"]
+      "@/types/*": ["app/_types/*"],
+      "@/stores/*": ["app/_stores/*"]
     }
   },
   "include": [

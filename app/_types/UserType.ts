@@ -1,5 +1,5 @@
 export type UserType = {
-    id: string;
+    id?: string;
     username: string;
     room_id: string;
 }
